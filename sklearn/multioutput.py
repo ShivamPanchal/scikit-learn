@@ -16,12 +16,13 @@ extends single output estimators to multioutput estimators.
 
 import numpy as np
 
-from abc import ABCMeta
-from .base import BaseEstimator, clone
+from abc import ABCMeta, abstractmethod
+from .base import BaseEstimator, clone, MetaEstimatorMixin
 from .base import RegressorMixin, ClassifierMixin
 from .utils import check_array, check_X_y
 from .utils.fixes import parallel_helper
 from .utils.validation import check_is_fitted, has_fit_parameter
+from .utils.multiclass import check_classification_targets
 from .externals.joblib import Parallel, delayed
 from .externals import six
 
@@ -37,8 +38,9 @@ def _fit_estimator(estimator, X, y, sample_weight=None):
     return estimator
 
 
-class MultiOutputEstimator(six.with_metaclass(ABCMeta, BaseEstimator)):
-
+class MultiOutputEstimator(six.with_metaclass(ABCMeta, BaseEstimator,
+                                              MetaEstimatorMixin)):
+    @abstractmethod
     def __init__(self, estimator, n_jobs=1):
         self.estimator = estimator
         self.n_jobs = n_jobs
@@ -73,6 +75,9 @@ class MultiOutputEstimator(six.with_metaclass(ABCMeta, BaseEstimator)):
         X, y = check_X_y(X, y,
                          multi_output=True,
                          accept_sparse=True)
+
+        if isinstance(self, ClassifierMixin):
+            check_classification_targets(y)
 
         if y.ndim == 1:
             raise ValueError("y must have at least two dimensions for "
